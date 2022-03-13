@@ -1,0 +1,15 @@
+- name: install docker package
+  shell: "amazon-linux-extras install docker -y"
+
+- name: Start docker daemon
+  ansible.builtin.service:
+    name: docker
+    state: started
+
+- name: install docker python SDK
+  pip:
+    name: docker
+
+- name: Create a docker network
+  community.docker.docker_network:
+    name: nginx-proxy

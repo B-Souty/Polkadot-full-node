@@ -1,0 +1,9 @@
+- name: Deploy a polkadot full node container
+  community.docker.docker_container:
+    name: polkadot-full-node
+    image: parity/polkadot:v0.9.13
+    networks:
+      - name: nginx-proxy
+    ports:
+      - 9615:9615
+    command: ["--name 'polkadot-full-node'", "--rpc-external", "--ws-external", "--prometheus-external", "--rpc-cors all"]

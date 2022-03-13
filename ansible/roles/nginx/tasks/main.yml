@@ -1,0 +1,49 @@
+- name: set dirs
+  set_fact:
+    proxy_dir: "{{ ansible_env.HOME }}/proxy"
+    certs_dir: "{{ ansible_env.HOME }}/proxy/certs"
+
+- name: Create proxy certs directory structure if it does not exist
+  ansible.builtin.file:
+    path: "{{ certs_dir }}/private/"
+    state: directory
+    recurse: yes
+    mode: '0755'
+
+- name: Install cryptography python package
+  pip:
+    name: cryptography
+
+- amazon.aws.ec2_metadata_facts:
+
+- name: Copy the nginx conf file
+  ansible.builtin.template:
+    src: files/nginx.conf
+    dest: "{{ proxy_dir }}/wss.conf"
+
+- name: Create private key (RSA, 4096 bits)
+  community.crypto.openssl_privatekey:
+    path: "{{ certs_dir }}/private/nginx-selfsigned.key"
+
+- name: Create simple self-signed certificate
+  community.crypto.x509_certificate:
+    path: "{{ certs_dir }}/private/nginx-cert.pem"
+    privatekey_path: "{{ certs_dir }}/private/nginx-selfsigned.key"
+    provider: selfsigned
+
+- name: Generate DH Parameters
+  community.crypto.openssl_dhparam:
+    path: "{{ certs_dir }}/dhparams.pem"
+    size: 2048
+
+- name: Deploy a nginx proxy container
+  community.docker.docker_container:
+    name: wss-proxy
+    image: nginx
+    ports:
+      - 443:443
+    networks:
+      - name: nginx-proxy
+    volumes:
+      - "{{ proxy_dir }}/wss.conf:/etc/nginx/conf.d/wss.conf:ro"
+      - "{{ certs_dir }}:/etc/ssl/certs"
